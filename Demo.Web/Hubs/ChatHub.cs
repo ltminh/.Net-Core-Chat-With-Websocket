@@ -3,8 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net.WebSockets;
 using System.Threading.Tasks;
-using WebSocketManager;
-using WebSocketManager.Common;
+using Demo.Web.Common;
+using Demo.Web.WebSocket;
 
 namespace Demo.Web.Hubs
 {
@@ -14,9 +14,9 @@ namespace Demo.Web.Hubs
         {
         }
 
-        public override async Task OnConnected(WebSocket socket)
+        public override async Task OnConnected(System.Net.WebSockets.WebSocket socket, string userId)
         {
-            await base.OnConnected(socket);
+            await base.OnConnected(socket, userId);
 
             var socketId = WebSocketConnectionManager.GetId(socket);
 
@@ -31,10 +31,11 @@ namespace Demo.Web.Hubs
 
         public async Task SendMessage(string socketId, string message)
         {
-            await InvokeClientMethodToAllAsync("receiveMessage", socketId, message);
+            await InvokeClientMethodToUser("receiveMessage", socketId, message);
         }
 
-        public override async Task OnDisconnected(WebSocket socket)
+
+        public override async Task OnDisconnected(System.Net.WebSockets.WebSocket socket)
         {
             var socketId = WebSocketConnectionManager.GetId(socket);
 

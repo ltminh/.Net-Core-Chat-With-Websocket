@@ -1,15 +1,16 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IdentityModel.Tokens.Jwt;
 using System.IO;
 using System.Linq;
 using System.Net.WebSockets;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Demo.Web.Services;
 using Microsoft.AspNetCore.Http;
-using Microsoft.Extensions.Primitives;
 
-namespace WebSocketManager
+namespace Demo.Web.WebSocket
 {
     public class WebSocketManagerMiddleware
     {
@@ -37,9 +38,19 @@ namespace WebSocketManager
                 return;
             }
 
+            // Get userId from accessToken
+            var jwtSecurityToken = new JwtSecurityTokenHandler().ReadJwtToken(token);
+
+            var userId = jwtSecurityToken.Claims.FirstOrDefault(c=>c.Type == JwtRegisteredClaimNames.Sub)?.Value;
+
+            if (String.IsNullOrEmpty(userId))
+            {
+                return;
+            }
+
 
             var socket = await context.WebSockets.AcceptWebSocketAsync().ConfigureAwait(false);
-            await _webSocketHandler.OnConnected(socket).ConfigureAwait(false);
+            await _webSocketHandler.OnConnected(socket, userId).ConfigureAwait(false);
 
             await Receive(socket, async (result, serializedInvocationDescriptor) =>
             {
@@ -70,7 +81,7 @@ namespace WebSocketManager
             //await _next.Invoke(context);
         }
 
-        private async Task Receive(WebSocket socket, Action<WebSocketReceiveResult, string> handleMessage)
+        private async Task Receive(System.Net.WebSockets.WebSocket socket, Action<WebSocketReceiveResult, string> handleMessage)
         {
             while (socket.State == WebSocketState.Open)
             {

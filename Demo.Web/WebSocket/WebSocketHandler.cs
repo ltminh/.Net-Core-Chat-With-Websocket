@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Net.WebSockets;
 using System.Reflection;
 using System.Text;
@@ -7,9 +8,10 @@ using System.Threading;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Serialization;
-using WebSocketManager.Common;
+using Demo.Web.Common;
+using Microsoft.AspNetCore.Http;
 
-namespace WebSocketManager
+namespace Demo.Web.WebSocket
 {
     public abstract class WebSocketHandler
     {
@@ -23,9 +25,9 @@ namespace WebSocketManager
             WebSocketConnectionManager = webSocketConnectionManager;
         }
 
-        public virtual async Task OnConnected(WebSocket socket)
+        public virtual async Task OnConnected(System.Net.WebSockets.WebSocket socket, string userId)
         {
-            WebSocketConnectionManager.AddSocket(socket);
+            WebSocketConnectionManager.AddSocket(socket, userId);
 
             await SendMessageAsync(socket, new Message()
             {
@@ -34,12 +36,12 @@ namespace WebSocketManager
             }).ConfigureAwait(false);
         }
 
-        public virtual async Task OnDisconnected(WebSocket socket)
+        public virtual async Task OnDisconnected(System.Net.WebSockets.WebSocket socket)
         {
             await WebSocketConnectionManager.RemoveSocket(WebSocketConnectionManager.GetId(socket)).ConfigureAwait(false);
         }
 
-        public async Task SendMessageAsync(WebSocket socket, Message message)
+        public async Task SendMessageAsync(System.Net.WebSockets.WebSocket socket, Message message)
         {
             if (socket.State != WebSocketState.Open)
                 return;
@@ -91,7 +93,12 @@ namespace WebSocketManager
             }
         }
 
-        public async Task ReceiveAsync(WebSocket socket, WebSocketReceiveResult result, string serializedInvocationDescriptor)
+        public async Task InvokeClientMethodToUser(string methodName, string socketId, params object[] arguments)
+        {
+            await InvokeClientMethodAsync(socketId, methodName, arguments).ConfigureAwait(false);
+        }
+
+        public async Task ReceiveAsync(System.Net.WebSockets.WebSocket socket, WebSocketReceiveResult result, string serializedInvocationDescriptor)
         {
             var invocationDescriptor = JsonConvert.DeserializeObject<InvocationDescriptor>(serializedInvocationDescriptor);
 

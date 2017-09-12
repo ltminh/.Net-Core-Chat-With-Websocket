@@ -1,9 +1,15 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 using System.Threading.Tasks;
 using Demo.Core.DataContext;
 using Demo.Web.Hubs;
+using Demo.Web.Middlewares;
+using Demo.Web.Services;
+using Demo.Web.WebSocket;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Identity;
@@ -12,7 +18,8 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using WebSocketManager;
+using Microsoft.IdentityModel.Tokens;
+using Swashbuckle.AspNetCore.Swagger;
 
 namespace Demo.Web
 {
@@ -25,13 +32,20 @@ namespace Demo.Web
 
         public IConfiguration Configuration { get; }
 
+        private readonly string SECRET_KEY = "mysupersecret_secretkey!123";
+
+        public static SecurityKey SecurityKey;
+
+        public static TokenProviderOptions TokenProviderOptions;
+
+        public static int TOKEN_EXPIRES = 24; // 24h;
+
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
             #region Database And Migration
-
-            services.AddDbContext<DataContext>(
-                options => options.UseSqlServer(Configuration.GetConnectionString("DefaultConnection"), b => b.MigrationsAssembly("Demo.Core")));
+           
+            services.AddDbContext<DataContext>(opt => opt.UseInMemoryDatabase("ChatDb"));
 
             #endregion
 
@@ -40,6 +54,38 @@ namespace Demo.Web
             services.AddIdentity<IdentityUser, IdentityRole>()
                 .AddEntityFrameworkStores<DataContext>()
                 .AddDefaultTokenProviders();
+
+            #endregion
+
+            #region JWT
+
+            SecurityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(SECRET_KEY));
+
+            TokenProviderOptions = new TokenProviderOptions
+            {
+                Expiration = TimeSpan.FromHours(TOKEN_EXPIRES),
+                SigningCredentials = new SigningCredentials(SecurityKey, SecurityAlgorithms.HmacSha256),
+            };
+
+            services.AddAuthentication()
+                .AddJwtBearer(o =>
+                {
+                    o.TokenValidationParameters = new TokenValidationParameters
+                    {
+                        IssuerSigningKey = SecurityKey,
+                        ValidateIssuerSigningKey = true,
+                        ValidateLifetime = true,
+                        ValidateIssuer = false,
+                        ValidateAudience = false,
+                        ClockSkew = TimeSpan.Zero
+                    };
+                });
+
+
+            services.AddAuthorization(options =>
+            {
+                options.DefaultPolicy = new AuthorizationPolicyBuilder(JwtBearerDefaults.AuthenticationScheme).RequireAuthenticatedUser().Build();
+            });
 
             #endregion
 
@@ -52,6 +98,32 @@ namespace Demo.Web
             services.AddMvc();
 
             services.AddWebSocketManager();
+
+            
+
+            #region Swagger
+
+            services.AddSwaggerGen(c =>
+            {
+                c.SwaggerDoc("v1", new Info { Version = "v1", Title = "Demo API", Description = @"  
+<h4>1. Oauth: </h4>
+<br/> - After login, you use access token
+<br/> - Add header request: <b> Authorization: Bearer [access token] </b>
+
+<h4>2. Login: </h4>
+<br/> - URL: api/token
+<br/> - Content-Type:application/x-www-form-urlencoded
+<br/> - Data: username=user1@g.com&password=123456
+" });
+            });
+
+            services.ConfigureSwaggerGen(options =>
+            {
+                options.DescribeAllEnumsAsStrings();
+            });
+
+
+            #endregion
 
             #region Extra configurations
 
@@ -68,7 +140,10 @@ namespace Demo.Web
 
             #endregion
 
+
             services.AddScoped<IDbInitializer, DbInitializer>();
+            services.AddTransient<IIdentityService, IdentityService>();
+
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -95,12 +170,19 @@ namespace Demo.Web
                 builder.AllowAnyOrigin()
                     .AllowAnyHeader()
                     .AllowAnyMethod());
-
             #endregion
 
             #region Seed Data For Development
 
             dbInitializer.Initialize();
+
+            #endregion
+
+            #region JWT Authentication
+
+            app.UseAuthentication();
+
+            app.UseMiddleware<TokenProviderMiddleware>(Options.Create(TokenProviderOptions));
 
             #endregion
 
@@ -116,6 +198,21 @@ namespace Demo.Web
             app.UseDefaultFiles();
 
             app.UseStaticFiles();
+
+            app.UseMvc();
+
+            #region Swagger
+
+            app.UseSwagger();
+
+            app.UseSwaggerUI(c =>
+            {
+                c.SwaggerEndpoint("/swagger/v1/swagger.json", "Demo API");
+                c.ShowRequestHeaders();
+            });
+
+
+            #endregion
         }
     }
 }

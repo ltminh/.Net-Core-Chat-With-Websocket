@@ -4,11 +4,19 @@
 <head>
     <meta charset="utf-8" />
     <title>Test Page</title>
+    <script
+        src="http://code.jquery.com/jquery-2.2.4.min.js"
+        integrity="sha256-BbhdlvQf/xTY9gja0Dq3HiwQF8LaCRTXxZKRutelT44="
+        crossorigin="anonymous"></script>
 </head>
 
 <body>
 <h1>This should be mapped to "/chat"</h1>
+<input type="text" id="userName" placeholder="UserName"/>
+<input type="text" id="passWord" placeholder="Password"/>
+<button id="login">Login</button>
 <input type=text id="textInput" placeholder="Enter your text" />
+<input type=text id="toId" placeholder="To UserId" />
 <button id="sendButton">Send</button>
 
 <ul id="messages"></ul>
@@ -17,34 +25,89 @@
 <script data-main="scripts/main" src="https://rawgit.com/radu-matei/websocket-manager/master/src/WebSocketManager.Client.TS/dist/WebSocketManager.js"></script>
 
 <script language="javascript" type="text/javascript">
-    var connection = new WebSocketManager.Connection("ws://" + location.host + "/chat");
-    connection.enableLogging = true;
-    connection.connectionMethods.onConnected = () => {
-        //optional
-        console.log("You are now connected! Connection ID: " + connection.connectionId);
-    }
-    connection.connectionMethods.onDisconnected = () => {
-        //optional
-        console.log("Disconnected!");
-    }
-    connection.clientMethods["receiveMessage"] = (socketId, message) => {
-        var messageText = socketId + " said: " + message;
-        console.log(messageText);
-        appendItem(list, messageText);
-    };
-    connection.start();
-    var list = document.getElementById("messages");
-    var button = document.getElementById("sendButton");
-    button.addEventListener("click", function() {
-        var input = document.getElementById("textInput");
-        connection.invoke("SendMessage", connection.connectionId, input.value);
-        input.value = "";
+
+    $( document ).ready(function() {
+
+        var token;
+        var btnLogin = document.getElementById("login");
+        btnLogin.addEventListener("click", function () {
+
+            var username = $('#userName').val();
+            var password = $('#passWord').val();
+
+            $.ajax({
+                url: getBaseUrl() + "/api/token",
+                crossDomain: true,
+                type: 'post',
+                contenttype: 'x-www-form-urlencoded',
+                data: 'username=' + username + '&password=' + password,
+                success: function (response) {
+                    token = response.data.access_token;
+                    var connection = new WebSocketManager.Connection("ws://" + document.location.host + "/chat?apiKey=" + token);
+                    connection.enableLogging = true;
+                    connection.connectionMethods.onConnected = () => {
+                        //optional
+                        console.log("You are now connected! Connection ID: " + connection.connectionId);
+                    }
+                    connection.connectionMethods.onDisconnected = () => {
+                        //optional
+                        console.log("Disconnected!");
+                    }
+                    connection.clientMethods["receiveMessage"] = (socketId, message) => {
+                        var messageText = socketId + " said: " + message;
+                        console.log(messageText);
+                        appendItem(list, messageText);
+                    };
+                    connection.start();
+                },
+                error: function (xhr, ajaxoptions, thrownerror) {
+
+                }
+            });
+
+        });
+
+        var list = document.getElementById("messages");
+        var button = document.getElementById("sendButton");
+        button.addEventListener("click", function () {
+            var input = document.getElementById("textInput");
+            var userId = document.getElementById("toId");
+
+            $.ajax({
+                url: getBaseUrl() + "/api/message",
+                type: 'post',
+                crossDomain: true,
+                headers: {
+                    'Authorization': "Bearer " + token,
+                    "content-type": "application/json",
+                },
+                contenttype: false,
+                processData : false,
+                data: JSON.stringify({ 'userId': userId.value, 'message': input.value }),
+                success: function (response) {
+                    
+                },
+                error: function (xhr, ajaxoptions, thrownerror) {
+
+                }
+            });
+
+            //connection.invoke("SendMessage", connection.connectionId, input.value);
+            input.value = "";
+        });
+        function appendItem(list, message) {
+            var item = document.createElement("li");
+            item.appendChild(document.createTextNode(message));
+            list.appendChild(item);
+        }
+
+        function getBaseUrl() {
+            return location.protocol + '//' + location.hostname + (location.port ? ':' + location.port : '');
+        }
+
     });
-    function appendItem(list, message) {
-        var item = document.createElement("li");
-        item.appendChild(document.createTextNode(message));
-        list.appendChild(item);
-    }
+
+    
 </script>
 </body>
 
