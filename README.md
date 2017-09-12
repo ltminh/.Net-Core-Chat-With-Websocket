@@ -1,4 +1,4 @@
 # .Net-Core-Chat-With-Websocket
 
-Using websocket-manager
+Reference
 https://github.com/radu-matei/websocket-manager
