@@ -19,7 +19,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
-using Swashbuckle.AspNetCore.Swagger;
 
 namespace Demo.Web
 {
@@ -99,31 +98,6 @@ namespace Demo.Web
 
             services.AddWebSocketManager();
 
-            
-
-            #region Swagger
-
-            services.AddSwaggerGen(c =>
-            {
-                c.SwaggerDoc("v1", new Info { Version = "v1", Title = "Demo API", Description = @"  
-<h4>1. Oauth: </h4>
-<br/> - After login, you use access token
-<br/> - Add header request: <b> Authorization: Bearer [access token] </b>
-
-<h4>2. Login: </h4>
-<br/> - URL: api/token
-<br/> - Content-Type:application/x-www-form-urlencoded
-<br/> - Data: username=user1@g.com&password=123456
-" });
-            });
-
-            services.ConfigureSwaggerGen(options =>
-            {
-                options.DescribeAllEnumsAsStrings();
-            });
-
-
-            #endregion
 
             #region Extra configurations
 
@@ -201,18 +175,6 @@ namespace Demo.Web
 
             app.UseMvc();
 
-            #region Swagger
-
-            app.UseSwagger();
-
-            app.UseSwaggerUI(c =>
-            {
-                c.SwaggerEndpoint("/swagger/v1/swagger.json", "Demo API");
-                c.ShowRequestHeaders();
-            });
-
-
-            #endregion
         }
     }
 }

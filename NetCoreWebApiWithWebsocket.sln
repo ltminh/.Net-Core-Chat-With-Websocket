@@ -3,11 +3,9 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
 VisualStudioVersion = 15.0.26730.3
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WebSocketManager", "WebSocketManager\WebSocketManager.csproj", "{DC0DDE59-0368-421F-9853-33C1D4781B96}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Demo.Core", "Demo.Core\Demo.Core.csproj", "{296E461F-C3D2-40D9-9F78-1AEB767161F7}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Demo.Core", "Demo.Core\Demo.Core.csproj", "{296E461F-C3D2-40D9-9F78-1AEB767161F7}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Demo.Web", "Demo.Web\Demo.Web.csproj", "{123DCE0A-14B0-46DD-BB11-F31823AC69BA}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Demo.Web", "Demo.Web\Demo.Web.csproj", "{123DCE0A-14B0-46DD-BB11-F31823AC69BA}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -15,10 +13,6 @@ Global
 		Release|Any CPU = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{DC0DDE59-0368-421F-9853-33C1D4781B96}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{DC0DDE59-0368-421F-9853-33C1D4781B96}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{DC0DDE59-0368-421F-9853-33C1D4781B96}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{DC0DDE59-0368-421F-9853-33C1D4781B96}.Release|Any CPU.Build.0 = Release|Any CPU
 		{296E461F-C3D2-40D9-9F78-1AEB767161F7}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{296E461F-C3D2-40D9-9F78-1AEB767161F7}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{296E461F-C3D2-40D9-9F78-1AEB767161F7}.Release|Any CPU.ActiveCfg = Release|Any CPU
