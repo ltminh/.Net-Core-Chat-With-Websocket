@@ -10,5 +10,6 @@ namespace Demo.Web.Common
         public string UserId { get; set; }
 
         public string Message { get; set; }
+
     }
 }

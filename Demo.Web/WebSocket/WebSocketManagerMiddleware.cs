@@ -54,20 +54,15 @@ namespace Demo.Web.WebSocket
 
             await Receive(socket, async (result, serializedInvocationDescriptor) =>
             {
-                if (result.MessageType == WebSocketMessageType.Text)
-                {
-                    await _webSocketHandler.ReceiveAsync(socket, result, serializedInvocationDescriptor).ConfigureAwait(false);
-                    return;
-                }
 
-                else if (result.MessageType == WebSocketMessageType.Close)
+                if (result.MessageType == WebSocketMessageType.Close)
                 {
                     try
                     {
                         await _webSocketHandler.OnDisconnected(socket);
                     }
 
-                    catch (WebSocketException)
+                    catch (WebSocketException )
                     {
                         throw; //let's not swallow any exception for now
                     }

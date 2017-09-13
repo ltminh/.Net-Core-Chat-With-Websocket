@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Net.WebSockets;
 using System.Reflection;
@@ -29,11 +30,6 @@ namespace Demo.Web.WebSocket
         {
             WebSocketConnectionManager.AddSocket(socket, userId);
 
-            await SendMessageAsync(socket, new Message()
-            {
-                MessageType = MessageType.ConnectionEvent,
-                Data = WebSocketConnectionManager.GetId(socket)
-            }).ConfigureAwait(false);
         }
 
         public virtual async Task OnDisconnected(System.Net.WebSockets.WebSocket socket)
@@ -60,81 +56,5 @@ namespace Demo.Web.WebSocket
             await SendMessageAsync(WebSocketConnectionManager.GetSocketById(socketId), message).ConfigureAwait(false);
         }
 
-        public async Task SendMessageToAllAsync(Message message)
-        {
-            foreach (var pair in WebSocketConnectionManager.GetAll())
-            {
-                if (pair.Value.State == WebSocketState.Open)
-                    await SendMessageAsync(pair.Value, message).ConfigureAwait(false);
-            }
-        }
-
-        public async Task InvokeClientMethodAsync(string socketId, string methodName, object[] arguments)
-        {
-            var message = new Message()
-            {
-                MessageType = MessageType.ClientMethodInvocation,
-                Data = JsonConvert.SerializeObject(new InvocationDescriptor()
-                {
-                    MethodName = methodName,
-                    Arguments = arguments
-                }, _jsonSerializerSettings)
-            };
-
-            await SendMessageAsync(socketId, message).ConfigureAwait(false);
-        }
-
-        public async Task InvokeClientMethodToAllAsync(string methodName, params object[] arguments)
-        {
-            foreach (var pair in WebSocketConnectionManager.GetAll())
-            {
-                if (pair.Value.State == WebSocketState.Open)
-                    await InvokeClientMethodAsync(pair.Key, methodName, arguments).ConfigureAwait(false);
-            }
-        }
-
-        public async Task InvokeClientMethodToUser(string methodName, string socketId, params object[] arguments)
-        {
-            await InvokeClientMethodAsync(socketId, methodName, arguments).ConfigureAwait(false);
-        }
-
-        public async Task ReceiveAsync(System.Net.WebSockets.WebSocket socket, WebSocketReceiveResult result, string serializedInvocationDescriptor)
-        {
-            var invocationDescriptor = JsonConvert.DeserializeObject<InvocationDescriptor>(serializedInvocationDescriptor);
-
-            var method = this.GetType().GetMethod(invocationDescriptor.MethodName);
-
-            if (method == null)
-            {
-                await SendMessageAsync(socket, new Message()
-                {
-                    MessageType = MessageType.Text,
-                    Data = $"Cannot find method {invocationDescriptor.MethodName}"
-                }).ConfigureAwait(false);
-                return;
-            }
-
-            try
-            {
-                method.Invoke(this, invocationDescriptor.Arguments);
-            }
-            catch (TargetParameterCountException e)
-            {
-                await SendMessageAsync(socket, new Message()
-                {
-                    MessageType = MessageType.Text,
-                    Data = $"The {invocationDescriptor.MethodName} method does not take {invocationDescriptor.Arguments.Length} parameters!"
-                }).ConfigureAwait(false);
-            }
-
-            catch (ArgumentException e)
-            {
-                await SendMessageAsync(socket, new Message()
-                {
-                    MessageType = MessageType.Text,
-                    Data = $"The {invocationDescriptor.MethodName} method takes different arguments!"
-                }).ConfigureAwait(false);
-            }
-        }
     }
 }

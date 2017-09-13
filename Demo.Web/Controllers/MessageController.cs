@@ -38,12 +38,21 @@ namespace Demo.Web.Controllers
             }
 
             var user = await this.mIdentityService.GetUser(this.User);
+
+            Message message = new Message()
+            {
+                FromId = user.Id,
+                ToId = model.UserId,
+                Data = model.Message
+            };
+
+
             if (user != null)
             {
-                await mChatHub.SendMessage(user.Id, model.Message);
+                await mChatHub.SendMessageAsync(user.Id, message);
             }
             
-            await mChatHub.SendMessage(model.UserId, model.Message);
+            await mChatHub.SendMessageAsync(model.UserId, message);
 
             return Ok();
         }

@@ -1,0 +1,388 @@
+﻿<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+
+<head>
+    <title>Provider</title>
+
+    <link rel="stylesheet" href="/Content/bootstrap.css" type="text/css" media="screen" />
+    <link type="text/css" rel="stylesheet" href="/Content/site.css" />
+
+    <script src="Scripts/jquery-1.6.4.min.js"></script>
+    <script src="Scripts/lodash.js"></script>
+
+    <script type="text/javascript">
+        function getBaseUrl() {
+            return location.protocol + '//' + location.hostname + (location.port ? ':' + location.port : '');
+        }
+
+        var socket;
+
+        var config = {
+            loginUsernamePasswordUrl: getBaseUrl() + "/api/token",
+            urlGetUser: getBaseUrl() + "/api/users",
+            urlGetUserCurrentInfo: getBaseUrl() + "/api/users/current",
+            urlMessage: getBaseUrl() + "/api/message",
+            urlSocket: "ws://" + document.location.host + "/chat"
+        };
+
+        var dataUsers = [
+        ];
+
+        var dataMessages = [
+        ];
+
+        $(function () {
+
+            setScreen(false);
+
+            $("#btnStartChat").click(function () {
+
+                loginFunc(function (error, data) {
+                    if (error) {
+                        return alert(error);
+                    }
+
+                    var header = {
+                        "Authorization": "Bearer " + data,
+                        "content-type": "application/json",
+                    };
+
+                    ajaxSetup(header);
+
+                    socketConnect(data);
+
+                    getUserCurrentInfo(function (errorGetUserCurrentInfo, dataGetUserCurrentInfo) {
+                        if (errorGetUserCurrentInfo) {
+                            return alert(errorGetUserCurrentInfo);
+                        }
+
+                        console.log(dataGetUserCurrentInfo);
+                        window.currentUser = {
+                            id: dataGetUserCurrentInfo.id,
+                            email: dataGetUserCurrentInfo.email
+                        };
+                        console.log(window.currentUser);
+                        registerEvents(data);
+
+                        setScreen(true);
+                        getUsers();
+                    });
+                });
+
+            });
+        });
+
+        window.currentUser = null;
+        window.differenceUser = null;
+
+
+        window.selectDivUsers = function (userId) {
+            var divUsers = $("#divUsers").children();
+            divUsers.removeClass("active");
+
+            var divUser = $("#divUsers > #" + userId);
+            divUser.addClass("active");
+        }
+
+        function socketConnect(token) {
+
+            socket = new WebSocket(config.urlSocket + "?apiKey=" + token);
+
+            socket.onopen = function (event) {
+                console.log("Socket Opened");
+            };
+
+            socket.onmessage = function (event) {
+                var message = JSON.parse(event.data);
+
+                console.log('Text message received. Message: ' + message.data);
+
+                if (_.isUndefined(window.currentUser) || _.isUndefined(window.differenceUser)) {
+                    return;
+                }
+
+                var mes = {
+                    message: message.data,
+                    fromId: message.fromId,
+                    toId: message.toId
+                };
+
+                var userName = window.currentUser.id == mes.fromId ? window.currentUser.email :  window.differenceUser.email;
+
+                dataMessages.push(mes);
+
+                addMessage(userName, message.data);
+            };
+
+            this.socket.onclose = function (event) {
+	            console.log("Socket Closed");
+	        };
+	        this.socket.onerror = function (event) {
+	            console.log('Error data: ' + event.error);
+	        };
+
+        }
+
+        function ajaxSetup(headers) {
+            $.ajaxSetup({
+                headers: headers
+            });
+        }
+
+        function ajaxGet(url, callback) {
+            $('#spinner-1').show();
+            $.ajax({
+                url: url,
+                type: "GET",
+                contentType: 'application/json',
+                success: function (response) {
+                    callback(null, response);
+
+                    $('#spinner-1').hide();
+                },
+                error: function (xhr, ajaxoptions, thrownerror) {
+                    console.log("xxx " + xhr.error().responseText);
+                    callback(thrownerror, null);
+
+                    $('#spinner-1').hide();
+                }
+            });
+        }
+
+        function getUserCurrentInfo(callback) {
+            ajaxGet(config.urlGetUserCurrentInfo, function (error, data) {
+
+                if (error) {
+                    return callback(error, null);
+                }
+
+                return callback(null, data.data);
+            });
+        }
+
+        function registerEvents(token) {
+
+            $('#btnSendMsg').click(function () {
+
+                var msg = $("#txtMessage").val();
+                var toUserId = window.differenceUser.id;
+                if (msg.length > 0) {
+
+                    $.ajax({
+                        url: getBaseUrl() + "/api/message",
+                        type: 'post',
+                        crossDomain: true,
+                        headers: {
+                            'Authorization': "Bearer " + token,
+                            "content-type": "application/json",
+                        },
+                        contenttype: false,
+                        processData: false,
+                        data: JSON.stringify({ 'userId': toUserId, 'message': msg }),
+                        success: function (response) {
+
+                        },
+                        error: function (xhr, ajaxoptions, thrownerror) {
+
+                        }
+                    });
+
+                    var mes = {
+                        message: msg,
+                        fromId: window.currentUser.id,
+                        toId: toUserId
+                    };
+
+                    var userName = window.currentUser.email;
+
+                    dataMessages.push(message);
+
+                    $("#txtMessage").val('');
+                }
+            });
+
+
+            $("#txtNickName").keypress(function (e) {
+                if (e.which === 13) {
+                    $("#btnStartChat").click();
+                }
+            });
+
+            $("#txtMessage").keypress(function (e) {
+                if (e.which === 13) {
+                    $('#btnSendMsg').click();
+                }
+            });
+        }
+
+        function setScreen(isLogin) {
+
+            if (!isLogin) {
+                $('#txtUsername').val("user1@g.com");
+                $('#txtPassword').val("123456");
+
+                $("#divChat").hide();
+                $("#divLogin").show();
+            }
+            else {
+
+                $("#divChat").show();
+                $("#divLogin").hide();
+            }
+
+        }
+
+        function findUser(userId) {
+            var user = _.find(dataUsers, function (o) { return o.userId === userId });
+
+            return user ? user : null;
+        }
+
+        function getUsers() {
+            ajaxGet(config.urlGetUser, function (error, data) {
+
+                if (error) {
+                    return alert(error);
+                }
+
+                _.forEach(data.data, function (user) {
+                    dataUsers.push(user);
+                });
+                return loadUsers();
+            });
+
+        }
+        function loadUsers() {
+            $("#divChatWindow").empty();
+            $("#divUsers").empty();
+
+
+
+            if (dataUsers.length === 0) {
+                return;
+            }
+            _.forEach(dataUsers, function (user) {
+                addUser(user.id, user.email);
+            });
+        }
+
+
+        function addMessage(userName, message) {
+            $('#divChatWindow').append('<div class="message"><span class="userName">' + userName + '</span>: ' + message + '</div>');
+
+            var height = $('#divChatWindow')[0].scrollHeight;
+            $('#divChatWindow').scrollTop(height);
+        }
+
+        function addUser(userId, email) {
+            var userIdHiden = window.currentUser.id;
+
+            var code = "";
+
+            if (userIdHiden === userId) {
+
+                code = $('<div class="loginUser">' + email + "</div>");
+
+            }
+            else {
+                var idDiv = userId;
+                code = $('<a id="' + idDiv + '" class="user" >' + email + '<a>');
+
+                $(code).click(function () {
+                    window.differenceUser = {
+                        id: userId,
+                        email: email
+                    };
+                    window.selectDivUsers(idDiv);
+                });
+            }
+
+            $("#divUsers").append(code);
+        }
+
+        function loginFunc(callback) {
+            $('#spinner-1').show();
+            var username = $('#txtUsername').val();
+            var password = $('#txtPassword').val();
+            $.ajax({
+                url: config.loginUsernamePasswordUrl,
+                type: "post",
+                contenttype: 'x-www-form-urlencoded',
+                data: "grant_type=password&username=" + username + "&password=" + password,
+                success: function (response) {
+                    var token = response.data.access_token;
+
+                    console.log("added key " + token);
+                    $('#spinner-1').hide();
+                    $('.login-success').fadeIn(400).delay(3000).fadeOut(400); //fade out after 3 seconds
+
+                    callback(null, token);
+                },
+                error: function (xhr, ajaxoptions, thrownerror) {
+                    $('#spinner-1').hide();
+                    $('.login-error').fadeIn(400).delay(3000).fadeOut(400); //fade out after 3 seconds
+
+                    callback('login fail', null);
+                }
+            });
+        };
+    </script>
+</head>
+
+<body>
+    <div id="header">
+        WebSocket Chat Room
+    </div>
+    <br />
+    <br />
+    <br />
+
+    <div id="divContainer">
+        <div id="divLogin" class="login">
+            <div>
+                Username:<br />
+                <input id="txtUsername" type="text" class="textBox" /> Password:
+                <br />
+                <input id="txtPassword" type="text" class="textBox" />
+            </div>
+            <div id="divButton">
+                <input id="btnStartChat" type="button" class="submitButton" value="Start Chat" />
+            </div>
+        </div>
+
+        <div id="divChat" class="chatRoom">
+            <div class="title">
+                Welcome to Chat Room
+            </div>
+            <div class="headerRoom">
+                <div id="divHeaderRoomChatWindow" class="chatWindow">
+                    Messages
+                </div>
+                <div id="divHeaderRoomUsers" class="users">
+                    Users (Select one to chat)
+                </div>
+            </div>
+            <div class="content">
+                <div id="divChatWindow" class="chatWindow">
+                </div>
+                <div id="divUsers" class="users">
+                </div>
+            </div>
+            <div class="messageBar">
+                <input class="textbox" type="text" id="txtMessage" />
+                <input id="btnSendMsg" type="button" value="Send" class="submitButton" />
+            </div>
+        </div>
+
+        <input id="hdId" type="hidden" />
+        <input id="hdUserName" type="hidden" />
+    </div>
+
+    <div class='login-error' style='display: none'>Login failed!</div>
+    <div class='login-success' style='display: none'>Login success!</div>
+    <span class="spinner-background" id="spinner-1">
+        <div class="loader1">Loading...</div>
+    </span>
+</body>
+
+</html>

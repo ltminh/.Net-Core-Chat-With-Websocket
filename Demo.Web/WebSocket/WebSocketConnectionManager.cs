@@ -41,10 +41,5 @@ namespace Demo.Web.WebSocket
                 statusDescription: "Closed by the WebSocketManager",
                 cancellationToken: CancellationToken.None).ConfigureAwait(false);
         }
-
-        //private string CreateConnectionId()
-        //{
-        //    return Guid.NewGuid().ToString();
-        //}
     }
 }

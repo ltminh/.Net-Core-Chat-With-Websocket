@@ -18,35 +18,17 @@ namespace Demo.Web.Hubs
         {
             await base.OnConnected(socket, userId);
 
-            var socketId = WebSocketConnectionManager.GetId(socket);
-
-            var message = new Message()
-            {
-                MessageType = MessageType.Text,
-                Data = $"{socketId} is now connected"
-            };
-
-            await SendMessageToAllAsync(message);
+            //var socketId = WebSocketConnectionManager.GetId(socket);
+          
         }
 
-        public async Task SendMessage(string socketId, string message)
-        {
-            await InvokeClientMethodToUser("receiveMessage", socketId, message);
-        }
 
 
         public override async Task OnDisconnected(System.Net.WebSockets.WebSocket socket)
         {
-            var socketId = WebSocketConnectionManager.GetId(socket);
+            //var socketId = WebSocketConnectionManager.GetId(socket);
 
             await base.OnDisconnected(socket);
-
-            var message = new Message()
-            {
-                MessageType = MessageType.Text,
-                Data = $"{socketId} disconnected"
-            };
-            await SendMessageToAllAsync(message);
         }
     }
 }
